@@ -28,6 +28,8 @@ class ChangedSignal(Signal):
             foo.connect(func, sender=MyModel, fields=['myfield1', 'myfield2'])
         """
 
+        from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+
         if not apps.models_ready:
             # We require access to Model._meta.get_fields(), which isn't available yet.
             # (This error would be raised below anyway, but we want to add a more meaningful message)
@@ -53,15 +55,24 @@ class ChangedSignal(Signal):
         def is_reverse_rel(f):
             return f.many_to_many or f.one_to_many or isinstance(f, ForeignObjectRel)
 
+        def is_generic_rel(f):
+            return isinstance(f, GenericForeignKey) or isinstance(f, GenericRelation)
+
         if fields is None:
             fields = sender._meta.get_fields()
-            fields = [f for f in fields if not is_reverse_rel(f)]
+            fields = [f for f in fields if not is_reverse_rel(f) and not is_generic_rel(f)]
         else:
             fields = [f for f in sender._meta.get_fields() if f.name in set(fields)]
             for f in fields:
                 if is_reverse_rel(f):
                     raise ValueError(
                         "django-fieldsignals doesn't handle reverse related fields "
+                        "({f.name} is a {f.__class__.__name__})"
+                        .format(f=f)
+                    )
+                if is_generic_rel(f):
+                    raise ValueError(
+                        "django-fieldsignals doesn't handle generic related fields "
                         "({f.name} is a {f.__class__.__name__})"
                         .format(f=f)
                     )
