@@ -108,8 +108,7 @@ class ChangedSignal(Signal):
         """
         def pr(instance, *args, **kwargs):
             changed_fields = self.get_and_update_changed_fields(receiver, instance, fields)
-            if changed_fields:
-                receiver(instance=instance, changed_fields=changed_fields, *args, **kwargs)
+            receiver(instance=instance, changed_fields=changed_fields, *args, **kwargs)
 
         pr._original_receiver = receiver
         pr._fields = fields
